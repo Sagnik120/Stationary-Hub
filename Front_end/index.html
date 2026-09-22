@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stationery Hub - Your Stationery & Office Supplies</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <div class="logo">
+            <h1>Stationery Hub</h1>
+        </div>
+        <nav>
+            <ul>
+                <li><a href="#home">Home</a></li>
+                <li><a href="#about">About</a></li>
+                <li><a href="#products">Products</a></li>
+                <li><a href="#faq">FAQ</a></li>
+                <li><a href="#contact">Contact</a></li>
+                <li><a href="#login">Login</a></li>
+                <li><a href="#register">Register</a></li>
+            </ul>
+        </nav>
+    </header>
+    <section class="hero-slider" id="home">
+        <div class="hero-slides">
+            <div class="slide active">
+                <h2>Discover Quality Stationery and Office Supplies</h2>
+                <p>Your one-stop shop for all your stationery needs. Perfect for students and professionals alike.</p>
+                <a href="#products" class="btn">Explore Now</a>
+            </div>
+            <div class="slide">
+                <h2>Back to School Specials</h2>
+                <p>Exclusive discounts on backpacks, notebooks, and more. Get ready for the new school year with our special offers.</p>
+                <a href="#products" class="btn">Shop Now</a>
+            </div>
+            <div class="slide">
+                <h2>Office Essentials Sale</h2>
+                <p>Up to 30% off on office supplies. Stock up on everything you need to stay productive.</p>
+                <a href="#products" class="btn">Browse Deals</a>
+            </div>
+            <div class="slide">
+                <h2>Customizable Stationery</h2>
+                <p>Personalize your notebooks, pens, and more with our custom options. Make your stationery uniquely yours.</p>
+                <a href="#products" class="btn">Get Started</a>
+            </div>
+            <div class="slide">
+                <h2>Eco-Friendly Products</h2>
+                <p>Explore our range of sustainable stationery options. Help the environment while enjoying top-quality products.</p>
+                <a href="#products" class="btn">Learn More</a>
+            </div>
+        </div>
+        <div class="hero-navigation">
+            <span class="dot active" onclick="currentSlide(1)"></span>
+            <span class="dot" onclick="currentSlide(2)"></span>
+            <span class="dot" onclick="currentSlide(3)"></span>
+            <span class="dot" onclick="currentSlide(4)"></span>
+            <span class="dot" onclick="currentSlide(5)"></span>
+        </div>
+    </section>
+    
+    
+    
+
+    <section class="products" id="products">
+        <h2>Our Featured Products</h2>
+        <div class="product-list">
+            <div class="product-item">
+                <img src="notebook.jpg" alt="Notebook">
+                <h3>Notebooks</h3>
+                <p>Stylish notebooks for all your notes and ideas.</p>
+            </div>
+            <div class="product-item">
+                <img src="pen.jpg" alt="Pens">
+                <h3>Pens</h3>
+                <p>High-quality pens for smooth writing.</p>
+            </div>
+            <div class="product-item">
+                <img src="organizer.jpg" alt="Organizers">
+                <h3>Organizers</h3>
+                <p>Keep your workspace neat and organized.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="faq" id="faq">
+        <h2>Frequently Asked Questions</h2>
+        <div class="faq-list">
+            <div class="faq-item">
+                <h4>How can I place an order?</h4>
+                <p>You can place an order by browsing our products and adding them to your cart. Once you're ready, proceed to checkout and follow the instructions.</p>
+            </div>
+            <div class="faq-item">
+                <h4>What payment methods do you accept?</h4>
+                <p>We accept all major credit cards, debit cards, and PayPal.</p>
+            </div>
+            <div class="faq-item">
+                <h4>Do you offer discounts for bulk purchases?</h4>
+                <p>Yes, we offer discounts for bulk purchases. Please contact us for more details.</p>
+            </div>
+        </div>
+    </section>
+
+    <footer id="contact">
+        <div class="contact-info">
+            <h2>Contact Us</h2>
+            <p>Email: <a href="mailto:info@stationeryhub.com">info@stationeryhub.com</a></p>
+            <p>Phone: +1 (123) 456-7890</p>
+            <p>Address: 123 Stationery Lane, City, Country</p>
+        </div>
+        <div class="social-media">
+            <h3>Follow Us</h3>
+            <a href="#"><img src="facebook-icon.png" alt="Facebook"></a>
+            <a href="#"><img src="twitter-icon.png" alt="Twitter"></a>
+            <a href="#"><img src="instagram-icon.png" alt="Instagram"></a>
+        </div>
+        <p>&copy; 2024 Stationery Hub. All rights reserved.</p>
+    </footer>
+    
+    <script>
+        let slideIndex = 0;
+        let slides = document.querySelectorAll('.hero-slider .slide');
+        let dots = document.querySelectorAll('.hero-navigation .dot');
+        
+        function showSlides() {
+            slides.forEach((slide, index) => {
+                slide.classList.remove('active');
+                dots[index].classList.remove('active');
+            });
+        
+            slideIndex++;
+            if (slideIndex > slides.length) { slideIndex = 1; }
+            slides[slideIndex - 1].classList.add('active');
+            dots[slideIndex - 1].classList.add('active');
+            setTimeout(showSlides, 5000); // Change slide every 5 seconds
+        }
+        
+        function currentSlide(n) {
+            slideIndex = n - 1;
+            showSlides();
+        }
+        
+        showSlides(); // Initialize the slider
+        </script>
+        
+        
+</body>
+</html>
