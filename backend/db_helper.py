@@ -2,7 +2,7 @@ import os
 import sqlite3
 from pathlib import Path
 from typing import Optional, Dict, Any, List
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 import config
 
@@ -98,10 +98,21 @@ def init_db(custom_path: Optional[str] = None):
         email TEXT UNIQUE NOT NULL COLLATE NOCASE,
         password_hash TEXT NOT NULL,
         role TEXT NOT NULL DEFAULT 'customer',
+        phone TEXT,
+        address TEXT,
+        avatar_url TEXT,
         is_active INTEGER NOT NULL DEFAULT 1,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
     """)
+
+    # Safe column additions if table already existed
+    for col, col_type in [("phone", "TEXT"), ("address", "TEXT"), ("avatar_url", "TEXT"), ("updated_at", "TIMESTAMP")]:
+        try:
+            cursor.execute(f"ALTER TABLE users ADD COLUMN {col} {col_type};")
+        except Exception:
+            pass
 
     # 2. Refresh Tokens Table (with rotation & replay protection)
     cursor.execute("""
@@ -116,20 +127,56 @@ def init_db(custom_path: Optional[str] = None):
     );
     """)
 
-    # 3. Orders Table
+    # 3. Password Resets Table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS password_resets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        token_hash TEXT NOT NULL,
+        expires_at TIMESTAMP NOT NULL,
+        is_used INTEGER NOT NULL DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+    """)
+
+    # 4. OAuth Accounts Table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS oauth_accounts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        provider TEXT NOT NULL,
+        provider_user_id TEXT NOT NULL,
+        email TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        UNIQUE (provider, provider_user_id)
+    );
+    """)
+
+    # 5. Orders Table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS orders (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         order_id INTEGER NOT NULL,
+        user_id INTEGER,
         item_name TEXT NOT NULL,
         quantity INTEGER NOT NULL,
         unit_price REAL NOT NULL,
         total_price REAL NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        status TEXT NOT NULL DEFAULT 'In Progress',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
     );
     """)
 
-    # 4. Order Tracking Table
+    for col, col_type in [("user_id", "INTEGER"), ("status", "TEXT DEFAULT 'In Progress'")]:
+        try:
+            cursor.execute(f"ALTER TABLE orders ADD COLUMN {col} {col_type};")
+        except Exception:
+            pass
+
+    # 6. Order Tracking Table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS order_tracking (
         order_id INTEGER PRIMARY KEY,
@@ -138,11 +185,15 @@ def init_db(custom_path: Optional[str] = None):
     );
     """)
 
-    # 5. Indexes for fast lookup
+    # 7. Indexes for fast lookup
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_tokens_user ON refresh_tokens(user_id);")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_tokens_hash ON refresh_tokens(token_hash);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_pw_reset_hash ON password_resets(token_hash);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_pw_reset_user ON password_resets(user_id);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_oauth_user ON oauth_accounts(user_id);")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_orders_order_id ON orders(order_id);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(user_id);")
 
     conn.commit()
     conn.close()
@@ -199,12 +250,41 @@ def get_user_by_id(user_id: int) -> Optional[Dict[str, Any]]:
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        query = "SELECT id, name, email, role, is_active, created_at FROM users WHERE id = ? LIMIT 1"
+        query = "SELECT id, name, email, role, phone, address, avatar_url, is_active, created_at, updated_at FROM users WHERE id = ? LIMIT 1"
         cursor.execute(query, (user_id,))
         row = cursor.fetchone()
         if row:
             return dict(row)
         return None
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def update_user_profile(user_id: int, name: str, phone: Optional[str] = None, address: Optional[str] = None) -> bool:
+    """Updates a user's personal profile information."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        query = "UPDATE users SET name = ?, phone = ?, address = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+        cursor.execute(query, (name.strip(), phone.strip() if phone else None, address.strip() if address else None, user_id))
+        conn.commit()
+        return cursor.rowcount > 0
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def update_user_password(user_id: int, new_password_hash: str) -> bool:
+    """Updates a user's password hash and revokes old sessions."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        query = "UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+        cursor.execute(query, (new_password_hash, user_id))
+        cursor.execute("UPDATE refresh_tokens SET is_revoked = 1 WHERE user_id = ?", (user_id,))
+        conn.commit()
+        return True
     finally:
         cursor.close()
         conn.close()
@@ -282,10 +362,136 @@ def revoke_all_user_tokens(user_id: int) -> bool:
 
 
 # ==========================================
+# Password Reset Queries (Parameterized)
+# ==========================================
+
+def create_password_reset(user_id: int, token_hash: str, expires_in_minutes: int = 15) -> bool:
+    """
+    Creates a password reset request.
+    Invalidates any existing unused tokens for this user.
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        # Invalidate old unused tokens
+        cursor.execute("UPDATE password_resets SET is_used = 1 WHERE user_id = ?", (user_id,))
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=expires_in_minutes)
+        query = "INSERT INTO password_resets (user_id, token_hash, expires_at, is_used) VALUES (?, ?, ?, 0)"
+        cursor.execute(query, (user_id, token_hash, expires_at.isoformat()))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Error creating password reset: {e}")
+        conn.rollback()
+        return False
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def verify_password_reset_token(token_hash: str) -> Optional[Dict[str, Any]]:
+    """
+    Verifies that a reset token exists, is unused, and has not expired.
+    Returns associated user details if valid.
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        query = """
+        SELECT pr.id AS reset_id, pr.user_id, pr.expires_at, pr.is_used, u.email, u.name
+        FROM password_resets pr
+        JOIN users u ON pr.user_id = u.id
+        WHERE pr.token_hash = ? AND pr.is_used = 0
+        LIMIT 1
+        """
+        cursor.execute(query, (token_hash,))
+        row = cursor.fetchone()
+        if not row:
+            return None
+        expires_at = datetime.fromisoformat(row["expires_at"]).replace(tzinfo=timezone.utc)
+        if datetime.now(timezone.utc) > expires_at:
+            return None
+        return dict(row)
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def complete_password_reset(token_hash: str, new_password_hash: str) -> bool:
+    """
+    Applies the new password hash, marks the reset token used,
+    and revokes all existing refresh tokens for the user.
+    """
+    record = verify_password_reset_token(token_hash)
+    if not record:
+        return False
+    user_id = record["user_id"]
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", (new_password_hash, user_id))
+        cursor.execute("UPDATE password_resets SET is_used = 1 WHERE token_hash = ?", (token_hash,))
+        cursor.execute("UPDATE refresh_tokens SET is_revoked = 1 WHERE user_id = ?", (user_id,))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Error completing password reset: {e}")
+        conn.rollback()
+        return False
+    finally:
+        cursor.close()
+        conn.close()
+
+
+# ==========================================
+# OAuth Accounts Queries (Parameterized)
+# ==========================================
+
+def get_user_by_oauth(provider: str, provider_user_id: str) -> Optional[Dict[str, Any]]:
+    """Retrieves a user linked to a third-party OAuth provider."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        query = """
+        SELECT u.id, u.name, u.email, u.role, u.is_active, u.created_at
+        FROM users u
+        JOIN oauth_accounts oa ON u.id = oa.user_id
+        WHERE oa.provider = ? AND oa.provider_user_id = ?
+        LIMIT 1
+        """
+        cursor.execute(query, (provider.lower(), str(provider_user_id)))
+        row = cursor.fetchone()
+        if row:
+            return dict(row)
+        return None
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def link_oauth_account(user_id: int, provider: str, provider_user_id: str, email: str) -> bool:
+    """Links a third-party OAuth account to an existing user."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        query = "INSERT OR IGNORE INTO oauth_accounts (user_id, provider, provider_user_id, email) VALUES (?, ?, ?, ?)"
+        cursor.execute(query, (user_id, provider.lower(), str(provider_user_id), email.strip().lower()))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Error linking oauth account: {e}")
+        return False
+    finally:
+        cursor.close()
+        conn.close()
+
+
+# ==========================================
 # Order & Stationery Queries (100% Parameterized)
 # ==========================================
 
-def insert_order_item(item_name: str, quantity: int, order_id: int) -> int:
+def insert_order_item(item_name: str, quantity: int, order_id: int, user_id: Optional[int] = None) -> int:
     """
     Inserts an order item using parameterized SQL.
     Calculates unit price and total price automatically from verified catalog.
@@ -297,8 +503,8 @@ def insert_order_item(item_name: str, quantity: int, order_id: int) -> int:
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        query = "INSERT INTO orders (order_id, item_name, quantity, unit_price, total_price) VALUES (?, ?, ?, ?, ?)"
-        cursor.execute(query, (order_id, clean_item, quantity, unit_price, total_price))
+        query = "INSERT INTO orders (order_id, user_id, item_name, quantity, unit_price, total_price, status) VALUES (?, ?, ?, ?, ?, ?, 'In Progress')"
+        cursor.execute(query, (order_id, user_id, clean_item, quantity, unit_price, total_price))
         conn.commit()
         return 1
     except Exception as e:
@@ -378,3 +584,161 @@ def get_order_status(order_id: int) -> Optional[str]:
     finally:
         cursor.close()
         conn.close()
+
+
+# ==========================================
+# User Order History & Management (IDOR Protected)
+# ==========================================
+
+def get_user_orders(user_id: int) -> List[Dict[str, Any]]:
+    """
+    Retrieves all orders placed by a specific user with aggregated totals.
+    Strictly scoped to user_id to prevent IDOR attacks.
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        query = """
+        SELECT 
+            o.order_id,
+            COALESCE(ot.status, o.status, 'In Progress') AS status,
+            COUNT(o.id) AS item_count,
+            COALESCE(SUM(o.total_price), 0.0) AS total_price,
+            MIN(o.created_at) AS created_at
+        FROM orders o
+        LEFT JOIN order_tracking ot ON o.order_id = ot.order_id
+        WHERE o.user_id = ?
+        GROUP BY o.order_id
+        ORDER BY o.order_id DESC
+        """
+        cursor.execute(query, (user_id,))
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def get_order_details(order_id: int, user_id: Optional[int] = None) -> Optional[Dict[str, Any]]:
+    """
+    Retrieves full itemized details for an order.
+    If user_id is provided, enforces that the order belongs to that user (IDOR prevention).
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        if user_id is not None:
+            query = """
+            SELECT o.id, o.order_id, o.user_id, o.item_name, o.quantity, o.unit_price, o.total_price,
+                   COALESCE(ot.status, o.status, 'In Progress') AS status, o.created_at
+            FROM orders o
+            LEFT JOIN order_tracking ot ON o.order_id = ot.order_id
+            WHERE o.order_id = ? AND o.user_id = ?
+            """
+            cursor.execute(query, (order_id, user_id))
+        else:
+            query = """
+            SELECT o.id, o.order_id, o.user_id, o.item_name, o.quantity, o.unit_price, o.total_price,
+                   COALESCE(ot.status, o.status, 'In Progress') AS status, o.created_at
+            FROM orders o
+            LEFT JOIN order_tracking ot ON o.order_id = ot.order_id
+            WHERE o.order_id = ?
+            """
+            cursor.execute(query, (order_id,))
+        rows = cursor.fetchall()
+        if not rows:
+            return None
+        items = [
+            {
+                "item_name": r["item_name"],
+                "quantity": r["quantity"],
+                "unit_price": r["unit_price"],
+                "total_price": r["total_price"]
+            }
+            for r in rows
+        ]
+        first = rows[0]
+        return {
+            "order_id": first["order_id"],
+            "user_id": first["user_id"],
+            "status": first["status"],
+            "created_at": first["created_at"],
+            "total_price": sum(item["total_price"] for item in items),
+            "items": items
+        }
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def create_user_order(user_id: int, items: List[Dict[str, Any]]) -> int:
+    """
+    Creates a new multi-item order linked to a user.
+    Calculates prices and initializes tracking status.
+    """
+    if not items:
+        raise ValueError("Order must contain at least one item")
+
+    order_id = get_next_order_id()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        for it in items:
+            clean_item = it["item_name"].strip().lower()
+            qty = int(it["quantity"])
+            unit_price = STATIONERY_PRICES.get(clean_item, 10.0)
+            total = unit_price * qty
+            cursor.execute(
+                "INSERT INTO orders (order_id, user_id, item_name, quantity, unit_price, total_price, status) VALUES (?, ?, ?, ?, ?, ?, 'In Progress')",
+                (order_id, user_id, clean_item, qty, unit_price, total)
+            )
+        cursor.execute(
+            "INSERT OR REPLACE INTO order_tracking (order_id, status, updated_at) VALUES (?, 'In Progress', CURRENT_TIMESTAMP)",
+            (order_id,)
+        )
+        conn.commit()
+        return order_id
+    except Exception as e:
+        print(f"Error creating user order: {e}")
+        conn.rollback()
+        raise
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def cancel_user_order(order_id: int, user_id: int) -> bool:
+    """
+    Cancels an order if it belongs to user_id and is in an eligible status.
+    IDOR-safe.
+    """
+    order = get_order_details(order_id, user_id=user_id)
+    if not order:
+        return False
+    current_status = order["status"].lower()
+    if current_status in ("delivered", "cancelled"):
+        return False
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("UPDATE orders SET status = 'Cancelled' WHERE order_id = ? AND user_id = ?", (order_id, user_id))
+        cursor.execute("UPDATE order_tracking SET status = 'Cancelled', updated_at = CURRENT_TIMESTAMP WHERE order_id = ?", (order_id,))
+        conn.commit()
+        return True
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def duplicate_user_order(order_id: int, user_id: int) -> Optional[int]:
+    """
+    Duplicates items from an existing order into a brand new order.
+    IDOR-safe: only allows duplicating user's own orders.
+    """
+    order = get_order_details(order_id, user_id=user_id)
+    if not order:
+        return None
+    items = [{"item_name": it["item_name"], "quantity": it["quantity"]} for it in order["items"]]
+    return create_user_order(user_id, items)
+

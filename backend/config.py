@@ -33,6 +33,20 @@ RATE_LIMIT_DEFAULT_WINDOW = int(os.getenv("RATE_LIMIT_DEFAULT_WINDOW", "60"))
 PBKDF2_ITERATIONS = 310000  # OWASP recommendation
 SALT_LENGTH = 16
 
+# Password Reset Constants
+PASSWORD_RESET_EXPIRE_MINUTES = int(os.getenv("PASSWORD_RESET_EXPIRE_MINUTES", "15"))
+RATE_LIMIT_FORGOT_PW_MAX = int(os.getenv("RATE_LIMIT_FORGOT_PW_MAX", "3"))
+RATE_LIMIT_FORGOT_PW_WINDOW = int(os.getenv("RATE_LIMIT_FORGOT_PW_WINDOW", "60"))
+
+# OAuth / Social Login Configurations
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
+GITHUB_CLIENT_ID = os.getenv("GITHUB_CLIENT_ID", "")
+GITHUB_CLIENT_SECRET = os.getenv("GITHUB_CLIENT_SECRET", "")
+FACEBOOK_CLIENT_ID = os.getenv("FACEBOOK_CLIENT_ID", "")
+FACEBOOK_CLIENT_SECRET = os.getenv("FACEBOOK_CLIENT_SECRET", "")
+OAUTH_REDIRECT_BASE = os.getenv("OAUTH_REDIRECT_BASE", "http://localhost:8080/login.html")
+
 # CORS Allowed Origins
 CORS_ORIGINS = [
     origin.strip() for origin in os.getenv(
