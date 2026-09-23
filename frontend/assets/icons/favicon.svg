@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="hubGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4fc1de"/>
+      <stop offset="100%" stop-color="#2a75d3"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#hubGradient)"/>
+  <!-- Fountain Pen Nib -->
+  <path d="M32 12 L44 26 L38 32 L34 28 L28 46 L26 44 L28 28 L24 32 L18 26 Z" fill="#ffffff"/>
+  <circle cx="31" cy="30" r="2.5" fill="#2a75d3"/>
+  <line x1="31" y1="30" x2="26" y2="44" stroke="#2a75d3" stroke-width="1.5" stroke-linecap="round"/>
+</svg>
