@@ -189,4 +189,182 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // ==========================================
+    // 3. Social OAuth Login Integration
+    // ==========================================
+    const oauthButtons = document.querySelectorAll('.oauth-btn');
+    oauthButtons.forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const provider = btn.getAttribute('data-provider') || 'google';
+            showNotice(`Connecting to ${provider.toUpperCase()}...`, false);
+
+            try {
+                // Step 1: Request OAuth URL & CSRF State
+                const urlResp = await fetch(`${API_BASE_URL}/oauth/${provider}/url`);
+                if (!urlResp.ok) throw new Error("Failed to initialize OAuth handshake");
+                const urlData = await urlResp.json();
+                const state = urlData.state;
+
+                // Step 2: In web environment, exchange state via callback
+                const callbackResp = await fetch(`${API_BASE_URL}/oauth/${provider}/callback`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        state: state,
+                        mock_profile: {
+                            name: `${provider.charAt(0).toUpperCase() + provider.slice(1)} Verified User`,
+                            email: `${provider}.user@stationaryhub.com`,
+                            id: `oauth_${Date.now()}`
+                        }
+                    })
+                });
+
+                const data = await callbackResp.json();
+                if (callbackResp.ok) {
+                    sessionStorage.setItem('access_token', data.access_token);
+                    sessionStorage.setItem('refresh_token', data.refresh_token);
+                    sessionStorage.setItem('user', JSON.stringify(data.user));
+                    showNotice(`Authenticated successfully with ${provider.toUpperCase()}! Redirecting...`, false);
+                    setTimeout(() => {
+                        window.location.href = 'dashboard.html';
+                    }, 1000);
+                } else {
+                    showNotice(data.detail || "Social authentication failed.", true);
+                }
+            } catch (err) {
+                showNotice(`Social login error with ${provider}: ${err.message}`, true);
+            }
+        });
+    });
+
+    // ==========================================
+    // 4. Forgot Password Modal Workflow
+    // ==========================================
+    const forgotLink = document.getElementById('forgot-password-link');
+    const forgotModal = document.getElementById('forgot-modal');
+    const closeForgotModal = document.getElementById('close-forgot-modal');
+    const step1Div = document.getElementById('forgot-step-1');
+    const step2Div = document.getElementById('forgot-step-2');
+    const forgotRequestForm = document.getElementById('forgot-request-form');
+    const forgotResetForm = document.getElementById('forgot-reset-form');
+
+    if (forgotLink && forgotModal) {
+        forgotLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            forgotModal.style.display = 'flex';
+            if (step1Div) step1Div.style.display = 'block';
+            if (step2Div) step2Div.style.display = 'none';
+        });
+    }
+
+    if (closeForgotModal && forgotModal) {
+        closeForgotModal.addEventListener('click', () => {
+            forgotModal.style.display = 'none';
+        });
+    }
+
+    // Close on click outside modal box
+    if (forgotModal) {
+        forgotModal.addEventListener('click', (e) => {
+            if (e.target === forgotModal) {
+                forgotModal.style.display = 'none';
+            }
+        });
+    }
+
+    // Step 1: Submit email to request token
+    if (forgotRequestForm) {
+        forgotRequestForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const emailInput = document.getElementById('forgot-email');
+            const email = emailInput ? emailInput.value.trim() : '';
+            if (!email) return;
+
+            const submitBtn = forgotRequestForm.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.textContent = "Requesting Token...";
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/forgot-password`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    showNotice(data.message, false);
+                    step1Div.style.display = 'none';
+                    step2Div.style.display = 'block';
+                    if (data.reset_token) {
+                        const tokenInput = document.getElementById('reset-token-input');
+                        if (tokenInput) tokenInput.value = data.reset_token;
+                    }
+                } else if (response.status === 429) {
+                    showNotice("Too many reset attempts. Please wait a minute.", true);
+                } else {
+                    showNotice(data.detail || "Unable to request password reset.", true);
+                }
+            } catch (err) {
+                showNotice("Network error requesting password reset.", true);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = "Send Recovery Token";
+            }
+        });
+    }
+
+    // Step 2: Submit token and new password
+    if (forgotResetForm) {
+        forgotResetForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const tokenInput = document.getElementById('reset-token-input');
+            const newPwInput = document.getElementById('reset-password-input');
+            const confirmPwInput = document.getElementById('reset-confirm-password');
+
+            const token = tokenInput ? tokenInput.value.trim() : '';
+            const newPassword = newPwInput ? newPwInput.value : '';
+            const confirmPassword = confirmPwInput ? confirmPwInput.value : '';
+
+            if (newPassword !== confirmPassword) {
+                showNotice("Passwords do not match.", true);
+                return;
+            }
+
+            const pwErr = checkPasswordComplexity(newPassword);
+            if (pwErr) {
+                showNotice(pwErr, true);
+                return;
+            }
+
+            const submitBtn = forgotResetForm.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.textContent = "Updating Password...";
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/reset-password`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token, new_password: newPassword })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    showNotice("Password reset successfully! Please log in.", false);
+                    forgotModal.style.display = 'none';
+                    if (container) container.classList.remove("active");
+                } else {
+                    showNotice(data.detail || "Password reset failed.", true);
+                }
+            } catch (err) {
+                showNotice("Network error resetting password.", true);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = "Set New Password";
+            }
+        });
+    }
 });
+

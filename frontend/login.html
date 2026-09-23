@@ -20,15 +20,15 @@
             <form>
                 <h1>Create Account</h1>
                 <div class="social-icons">
-                    <a href="#" class="icon"><i class="fa-brands fa-google"></i></a>
-                    <a href="#" class="icon"><i class="fa-brands fa-facebook-f"></i></a>
-                    <a href="#" class="icon"><i class="fa-brands fa-github"></i></a>
-                    <a href="#" class="icon"><i class="fa-brands fa-linkedin-in"></i></a>
+                    <a href="#" class="icon oauth-btn" data-provider="google" title="Continue with Google"><i class="fa-brands fa-google"></i></a>
+                    <a href="#" class="icon oauth-btn" data-provider="facebook" title="Continue with Facebook"><i class="fa-brands fa-facebook-f"></i></a>
+                    <a href="#" class="icon oauth-btn" data-provider="github" title="Continue with GitHub"><i class="fa-brands fa-github"></i></a>
+                    <a href="#" class="icon oauth-btn" data-provider="linkedin" title="Continue with LinkedIn"><i class="fa-brands fa-linkedin-in"></i></a>
                 </div>
                 <span>or use your email for registration</span>
                 <input type="text" placeholder="Name" required>
                 <input type="email" placeholder="Email" required>
-                <input type="password" placeholder="Password (min 6 chars, 1 uppercase, 1 digit)" required>
+                <input type="password" placeholder="Password (min 8 chars, 1 uppercase, 1 digit, 1 symbol)" required>
                 <button type="submit">Sign Up</button>
             </form>
         </div>
@@ -36,15 +36,15 @@
             <form>
                 <h1>Log In</h1>
                 <div class="social-icons">
-                    <a href="#" class="icon"><i class="fa-brands fa-google"></i></a>
-                    <a href="#" class="icon"><i class="fa-brands fa-facebook-f"></i></a>
-                    <a href="#" class="icon"><i class="fa-brands fa-github"></i></a>
-                    <a href="#" class="icon"><i class="fa-brands fa-linkedin-in"></i></a>
+                    <a href="#" class="icon oauth-btn" data-provider="google" title="Continue with Google"><i class="fa-brands fa-google"></i></a>
+                    <a href="#" class="icon oauth-btn" data-provider="facebook" title="Continue with Facebook"><i class="fa-brands fa-facebook-f"></i></a>
+                    <a href="#" class="icon oauth-btn" data-provider="github" title="Continue with GitHub"><i class="fa-brands fa-github"></i></a>
+                    <a href="#" class="icon oauth-btn" data-provider="linkedin" title="Continue with LinkedIn"><i class="fa-brands fa-linkedin-in"></i></a>
                 </div>
                 <span>or use your email password</span>
                 <input type="email" placeholder="Email" required>
                 <input type="password" placeholder="Password" required>
-                <a href="#">Forgot your password?</a>
+                <a href="#" id="forgot-password-link">Forgot your password?</a>
                 <button type="submit">Log In</button>
             </form>
         </div>
@@ -60,6 +60,31 @@
                     <p>Register with your personal details to start ordering stationery seamlessly</p>
                     <button type="button" class="hidden" id="register">Sign Up</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Forgot Password Modal -->
+    <div id="forgot-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-box">
+            <button type="button" class="modal-close" id="close-forgot-modal">&times;</button>
+            <div id="forgot-step-1">
+                <h2>Reset Your Password</h2>
+                <p>Enter your registered email address to receive a secure recovery token.</p>
+                <form id="forgot-request-form">
+                    <input type="email" id="forgot-email" placeholder="Registered Email" required>
+                    <button type="submit" class="modal-submit-btn">Send Recovery Token</button>
+                </form>
+            </div>
+            <div id="forgot-step-2" style="display: none;">
+                <h2>Create New Password</h2>
+                <p>Enter the recovery token and choose a strong new password.</p>
+                <form id="forgot-reset-form">
+                    <input type="text" id="reset-token-input" placeholder="Recovery Token" required>
+                    <input type="password" id="reset-password-input" placeholder="New Password (min 8 chars, 1 uppercase, 1 symbol)" required>
+                    <input type="password" id="reset-confirm-password" placeholder="Confirm New Password" required>
+                    <button type="submit" class="modal-submit-btn">Set New Password</button>
+                </form>
             </div>
         </div>
     </div>
