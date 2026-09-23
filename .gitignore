@@ -24,3 +24,10 @@ Thumbs.db
 # Environment files
 .env
 .env.*
+
+# Media backups and scratch
+*.orig.*
+*raw_videos/
+*raw_images/
+*.tmp
+
