@@ -1,0 +1,30 @@
+# Set default behavior to automatically normalize line endings
+* text=auto
+
+# Explicitly declare text files you want to always be normalized and converted
+# to native line endings on checkout.
+*.html text
+*.css text
+*.js text
+*.json text
+*.md text
+*.txt text
+*.py text
+
+# Declare files that will always have CRLF line endings on checkout
+# (e.g. Windows batch files, if any)
+*.bat text eol=crlf
+
+# Declare files that will always have LF line endings on checkout
+*.sh text eol=lf
+
+# Denote all large media files as binary — never touch their line endings
+*.mp4 binary
+*.mov binary
+*.webm binary
+*.jpg binary
+*.jpeg binary
+*.png binary
+*.gif binary
+*.svg text
+*.ico binary
