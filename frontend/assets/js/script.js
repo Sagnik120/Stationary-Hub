@@ -154,4 +154,32 @@ function boxVideoHover() {
         });
     });
 }
-boxVideoHover();
+boxVideoHover();
+
+function checkAuthStatus() {
+    const authLink = document.getElementById("auth-link");
+    const userStr = sessionStorage.getItem("user");
+    const accessToken = sessionStorage.getItem("access_token");
+
+    if (userStr && accessToken && authLink) {
+        try {
+            const user = JSON.parse(userStr);
+            const parentElement = authLink.parentElement;
+            parentElement.innerHTML = `
+                <span style="font-size: 1.2vw; color: #4fc1de; font-weight: 500;">Hi, ${user.name}</span>
+                <a href="#" id="logout-btn" style="text-decoration: none; color: #ffffff; font-size: 1.2vw; margin-left: 12px; opacity: 0.85;">Logout</a>
+            `;
+            const logoutBtn = document.getElementById("logout-btn");
+            if (logoutBtn) {
+                logoutBtn.addEventListener("click", (e) => {
+                    e.preventDefault();
+                    sessionStorage.clear();
+                    window.location.reload();
+                });
+            }
+        } catch (e) {
+            sessionStorage.clear();
+        }
+    }
+}
+checkAuthStatus();
