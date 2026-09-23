@@ -19,16 +19,27 @@ TEST_CATEGORIES = [
     ("Unit Tests - Password Hashing", "test/unit/test_password_hashing.py"),
     ("Unit Tests - JWT Token Lifecycle", "test/unit/test_jwt_tokens.py"),
     ("Unit Tests - Input & Password Complexity", "test/unit/test_input_validation.py"),
+    ("Unit Tests - Password Reset Tokens", "test/unit/test_password_reset.py"),
+    ("Unit Tests - OAuth Providers & State", "test/unit/test_oauth_providers.py"),
     ("Security Tests - SQL Injection Vectors", "test/security/test_sql_injection.py"),
     ("Security Tests - JWT Vulnerabilities & Replay", "test/security/test_jwt_vulnerabilities.py"),
     ("Security Tests - Rate Limiting & Brute Force", "test/security/test_rate_limiting.py"),
     ("Security Tests - Security Headers & CORS", "test/security/test_security_headers.py"),
+    ("Security Tests - Password Reset Replay & Enumeration", "test/security/test_password_reset_security.py"),
+    ("Security Tests - OAuth CSRF & State Replay", "test/security/test_oauth_security.py"),
+    ("Security Tests - IDOR & Authorization Controls", "test/security/test_idor_authorization.py"),
     ("Integration Tests - Auth Lifecycle Workflow", "test/integration/test_auth_workflow.py"),
     ("Integration Tests - Token Rotation Chain", "test/integration/test_token_rotation.py"),
     ("Integration Tests - Orders & Dialogflow Webhook", "test/integration/test_order_security.py"),
+    ("Integration Tests - Forgot Password Recovery Flow", "test/integration/test_forgot_password_flow.py"),
+    ("Integration Tests - Social OAuth Authentication", "test/integration/test_social_oauth_flow.py"),
+    ("Integration Tests - User Profile & Password Updates", "test/integration/test_user_profile_flow.py"),
+    ("Integration Tests - Customer Order History & Reorder", "test/integration/test_order_history_flow.py"),
     ("Boundary Tests - Payload Limits & Unicode", "test/boundary/test_payload_boundaries.py"),
     ("Boundary Tests - Concurrency & Race Conditions", "test/boundary/test_concurrency.py"),
     ("Boundary Tests - Error Handling & Edge Cases", "test/boundary/test_error_handling.py"),
+    ("Boundary Tests - Order Catalog & Quantities", "test/boundary/test_order_boundaries.py"),
+    ("Boundary Tests - Reset Rate Limits & Weak Passwords", "test/boundary/test_reset_boundaries.py"),
 ]
 
 
@@ -79,7 +90,7 @@ def run_suite():
     print("-" * 75)
 
     if total_failed == 0:
-        print("\n🎉 ALL 13 TEST CATEGORIES PASSED WITH 100% SUCCESS!")
+        print(f"\n🎉 ALL {len(TEST_CATEGORIES)} TEST CATEGORIES PASSED WITH 100% SUCCESS!")
         print("   All security layers, boundary conditions, and production requirements verified.")
         return 0
     else:
