@@ -139,3 +139,19 @@ var swiper = new Swiper(".mySwiper", {
             disableOnInteraction: false,
           },
   });
+
+function boxVideoHover() {
+    const boxes = document.querySelectorAll("#page3-elements .box");
+    boxes.forEach((box) => {
+        const video = box.querySelector("video");
+        if (!video) return;
+        box.addEventListener("mouseenter", () => {
+            video.currentTime = 0;
+            video.play().catch(() => {});
+        });
+        box.addEventListener("mouseleave", () => {
+            video.pause();
+        });
+    });
+}
+boxVideoHover();
