@@ -166,8 +166,15 @@ function checkAuthStatus() {
             const user = JSON.parse(userStr);
             const parentElement = authLink.parentElement;
             parentElement.innerHTML = `
-                <span style="font-size: 1.2vw; color: #4fc1de; font-weight: 500;">Hi, ${user.name}</span>
-                <a href="#" id="logout-btn" style="text-decoration: none; color: #ffffff; font-size: 1.2vw; margin-left: 12px; opacity: 0.85;">Logout</a>
+                <a href="dashboard.html" style="text-decoration: none; font-size: 1.2vw; color: #4fc1de; font-weight: 500;">
+                    Hi, ${user.name}
+                </a>
+                <a href="dashboard.html" style="text-decoration: none; color: #ffffff; font-size: 1.1vw; margin-left: 10px; opacity: 0.85;">
+                    Dashboard
+                </a>
+                <a href="#" id="logout-btn" style="text-decoration: none; color: #f87171; font-size: 1.1vw; margin-left: 10px; opacity: 0.85;">
+                    Logout
+                </a>
             `;
             const logoutBtn = document.getElementById("logout-btn");
             if (logoutBtn) {

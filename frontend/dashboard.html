@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Dashboard - Stationery Hub</title>
+    <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link rel="stylesheet" href="assets/css/dashboard.css">
+</head>
+
+<body>
+    <!-- Top Header -->
+    <header class="dash-header">
+        <a href="index.html" class="dash-brand">
+            <img src="assets/icons/favicon.svg" alt="Stationery Hub Logo">
+            <span>Stationery Hub</span>
+        </a>
+        <div class="dash-header-actions">
+            <a href="index.html" class="store-link">
+                <i class="fa-solid fa-store"></i> Back to Store
+            </a>
+            <span id="nav-user-greeting" style="font-size: 14px; color: var(--primary); font-weight: 600;"></span>
+            <button type="button" class="logout-btn" id="logout-btn">
+                <i class="fa-solid fa-right-from-bracket"></i> Logout
+            </button>
+        </div>
+    </header>
+
+    <!-- Dashboard Container -->
+    <div class="dash-container">
+        <!-- Sidebar Navigation -->
+        <aside class="dash-sidebar">
+            <div class="user-mini-card">
+                <div class="avatar-circle" id="user-avatar-initials">U</div>
+                <div class="user-mini-name" id="user-display-name">Loading...</div>
+                <div class="user-mini-email" id="user-display-email">...</div>
+            </div>
+
+            <nav class="nav-tabs">
+                <button type="button" class="tab-btn active" data-tab="tab-orders">
+                    <i class="fa-solid fa-box-archive"></i> Order History
+                </button>
+                <button type="button" class="tab-btn" data-tab="tab-profile">
+                    <i class="fa-solid fa-user-gear"></i> Profile & Address
+                </button>
+                <button type="button" class="tab-btn" data-tab="tab-new-order">
+                    <i class="fa-solid fa-cart-plus"></i> Place New Order
+                </button>
+                <button type="button" class="tab-btn" data-tab="tab-security">
+                    <i class="fa-solid fa-shield-halved"></i> Security Center
+                </button>
+            </nav>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="dash-main">
+            <!-- Global Stats Bar -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon orders"><i class="fa-solid fa-bag-shopping"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-value" id="stat-total-orders">0</div>
+                        <div class="stat-label">Total Orders</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon pending"><i class="fa-solid fa-clock-rotate-left"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-value" id="stat-pending-orders">0</div>
+                        <div class="stat-label">In Progress</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon spent"><i class="fa-solid fa-indian-rupee-sign"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-value" id="stat-total-spent">₹0.00</div>
+                        <div class="stat-label">Total Spent</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 1: Order History -->
+            <section id="tab-orders" class="tab-content active">
+                <div class="section-header">
+                    <h1>My Orders</h1>
+                    <p>Track your stationery deliveries, review item details, or cancel eligible orders.</p>
+                </div>
+
+                <div class="orders-list" id="orders-container">
+                    <p style="color: var(--text-muted); font-size: 14px;">Loading order history...</p>
+                </div>
+            </section>
+
+            <!-- Tab 2: Profile & Details -->
+            <section id="tab-profile" class="tab-content">
+                <div class="section-header">
+                    <h1>Personal Profile</h1>
+                    <p>Manage your contact details and default delivery address for quick checkout.</p>
+                </div>
+
+                <div class="card-box">
+                    <h3><i class="fa-solid fa-id-card"></i> Contact Information</h3>
+                    <form id="profile-form">
+                        <div class="form-group">
+                            <label for="prof-email">Email Address (Read-only)</label>
+                            <input type="email" id="prof-email" disabled>
+                        </div>
+                        <div class="form-group">
+                            <label for="prof-name">Full Name</label>
+                            <input type="text" id="prof-name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="prof-phone">Phone Number</label>
+                            <input type="tel" id="prof-phone" placeholder="+91 98765 43210">
+                        </div>
+                        <div class="form-group">
+                            <label for="prof-address">Delivery / Shipping Address</label>
+                            <textarea id="prof-address" rows="3" placeholder="Flat No, Street, City, State, PIN Code"></textarea>
+                        </div>
+                        <button type="submit" class="btn-primary" id="save-profile-btn">Save Changes</button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Tab 3: Place New Order -->
+            <section id="tab-new-order" class="tab-content">
+                <div class="section-header">
+                    <h1>Fast Order Stationery</h1>
+                    <p>Pick items directly from our verified stationery catalog and place an instant order.</p>
+                </div>
+
+                <div class="card-box">
+                    <h3><i class="fa-solid fa-list-check"></i> Select Stationery Items</h3>
+                    <div class="catalog-grid" id="catalog-picker">
+                        <!-- Dynamically filled by JS or predefined -->
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-color);">
+                        <div style="font-size: 16px; font-weight: 600;">
+                            Estimated Total: <span id="quick-order-total" style="color: var(--primary);">₹0.00</span>
+                        </div>
+                        <button type="button" class="btn-primary" id="place-quick-order-btn">
+                            <i class="fa-solid fa-paper-plane"></i> Place Order Now
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab 4: Security Center -->
+            <section id="tab-security" class="tab-content">
+                <div class="section-header">
+                    <h1>Security & Sessions</h1>
+                    <p>Control password security and manage active device sessions.</p>
+                </div>
+
+                <div class="card-box">
+                    <h3><i class="fa-solid fa-key"></i> Update Password</h3>
+                    <form id="change-password-form">
+                        <div class="form-group">
+                            <label for="curr-password">Current Password</label>
+                            <input type="password" id="curr-password" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="new-password">New Password (min 8 chars, 1 uppercase, 1 symbol)</label>
+                            <input type="password" id="new-password" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="confirm-new-password">Confirm New Password</label>
+                            <input type="password" id="confirm-new-password" required>
+                        </div>
+                        <button type="submit" class="btn-primary" id="update-password-btn">Update Password</button>
+                    </form>
+                </div>
+
+                <div class="card-box">
+                    <h3><i class="fa-solid fa-desktop"></i> Active Device Sessions</h3>
+                    <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 18px;">
+                        If you notice suspicious activity or forgot to log out on a public computer, you can terminate all other active device tokens instantly.
+                    </p>
+                    <button type="button" class="btn-danger" id="revoke-sessions-btn">
+                        <i class="fa-solid fa-power-off"></i> Terminate All Active Sessions
+                    </button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="dash-toast"></div>
+
+    <script src="assets/js/dashboard.js"></script>
+</body>
+
+</html>
