@@ -31,3 +31,16 @@ Thumbs.db
 *raw_images/
 *.tmp
 
+# Databases & Runtime Data
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+backend/data/*.db
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
